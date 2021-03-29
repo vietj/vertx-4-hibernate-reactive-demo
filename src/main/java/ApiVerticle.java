@@ -26,6 +26,9 @@ public class ApiVerticle extends AbstractVerticle {
   private Mutiny.SessionFactory emf = Persistence.createEntityManagerFactory("pg-demo").unwrap(Mutiny.SessionFactory.class);
   private ObjectMapper objectMapper = new JsonMapper();
 
+  public ApiVerticle() {
+  }
+
   @Override
   public Uni<Void> asyncStart() {
     Router router = Router.router(vertx);
