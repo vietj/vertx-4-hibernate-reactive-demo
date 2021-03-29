@@ -49,16 +49,14 @@ public class ApiVerticle extends AbstractVerticle {
   }
 
   private Uni<Product> fetchProduct(RoutingContext rc) {
-    return emf.withSession(session -> {
-      long id;
-      try {
+    return Uni
+      .createFrom()
+      .item(() -> {
         String idParam = rc.pathParam("id");
-        id = Long.parseLong(idParam);
-      } catch (Exception e) {
-        return Uni.createFrom().failure(e);
-      }
-      return session.find(Product.class, id);
-    });
+        return Long.parseLong(idParam);
+      })
+      .flatMap(id -> emf
+        .withSession(session -> session.find(Product.class, id)));
   }
 
   // TODO : cannot handle 201 code currently
