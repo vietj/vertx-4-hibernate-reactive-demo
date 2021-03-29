@@ -35,7 +35,9 @@ public class ApiVerticle extends AbstractVerticle {
 
     BodyHandler bodyHandler = BodyHandler.create();
     router.post().handler(bodyHandler::handle);
-    router.get("/products").handler(this::listProducts);
+
+    router.get("/products").respond(rc -> listProducts());
+
     router.get("/products/:id").handler(this::fetchProduct);
     router.post("/products").handler(this::appendProduct);
 
@@ -56,11 +58,10 @@ public class ApiVerticle extends AbstractVerticle {
     );
   }
 
-  private void listProducts(RoutingContext rc) {
-    dispatch("listProducts", rc, session -> session.createQuery("from Product", Product.class)
+  private Uni<String> listProducts() {
+    return emf.withSession(session -> session.createQuery("from Product", Product.class)
       .getResultList()
-      .chain(this::mapProductsToJson)
-      .chain(json -> forwardJson(rc, json)));
+      .chain(this::mapProductsToJson));
   }
 
   private void fetchProduct(RoutingContext rc) {
