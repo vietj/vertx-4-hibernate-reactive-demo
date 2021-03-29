@@ -1,6 +1,3 @@
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import data.Product;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.core.AbstractVerticle;
@@ -24,7 +21,6 @@ public class ApiVerticle extends AbstractVerticle {
   private static final Logger logger = LoggerFactory.getLogger(ApiVerticle.class);
 
   private Mutiny.SessionFactory emf = Persistence.createEntityManagerFactory("pg-demo").unwrap(Mutiny.SessionFactory.class);
-  private ObjectMapper objectMapper = new JsonMapper();
 
   public ApiVerticle() {
   }
@@ -37,8 +33,7 @@ public class ApiVerticle extends AbstractVerticle {
     router.post().handler(bodyHandler::handle);
 
     router.get("/products").respond(rc -> listProducts());
-
-    router.get("/products/:id").handler(this::fetchProduct);
+    router.get("/products/:id").respond(this::fetchProduct);
     router.post("/products").handler(this::appendProduct);
 
     return vertx.createHttpServer()
@@ -48,28 +43,26 @@ public class ApiVerticle extends AbstractVerticle {
       .replaceWithVoid();
   }
 
-  private <T> void dispatch(String operation, RoutingContext rc, Function<Mutiny.Session, Uni<T>> block) {
-    emf.withSession(block).subscribe().with(
-      ok -> logger.info("Served {} request from {}", operation, rc.request().remoteAddress()),
-      err -> {
-        logger.error("Failed to serve {} request from {}", operation, rc.request().remoteAddress(), err);
-        rc.fail(500);
-      }
-    );
-  }
-
-  private Uni<String> listProducts() {
+  private Uni<List<Product>> listProducts() {
     return emf.withSession(session -> session.createQuery("from Product", Product.class)
-      .getResultList()
-      .chain(this::mapProductsToJson));
+      .getResultList());
   }
 
-  private void fetchProduct(RoutingContext rc) {
-    String id = rc.pathParam("id");
-    dispatch("fetchProduct", rc, session -> session.find(Product.class, Long.valueOf(id))
-      .chain(product -> forwardProductToJson(rc, product)));
+  private Uni<Product> fetchProduct(RoutingContext rc) {
+    return emf.withSession(session -> {
+      long id;
+      try {
+        String idParam = rc.pathParam("id");
+        id = Long.parseLong(idParam);
+      } catch (Exception e) {
+        return Uni.createFrom().failure(e);
+      }
+      return session.find(Product.class, id);
+    });
   }
 
+  // TODO : cannot handle 201 code currently
+  // this is a 4.1 feature
   private void appendProduct(RoutingContext rc) {
     JsonObject json = rc.getBodyAsJson();
     String name;
@@ -96,29 +89,14 @@ public class ApiVerticle extends AbstractVerticle {
     });
   }
 
-  private Uni<Void> forwardProductToJson(RoutingContext rc, Product product) {
-    if (product != null) {
-      JsonObject json = new JsonObject()
-        .put("id", product.getId())
-        .put("name", product.getName())
-        .put("price", product.getPrice().toString());
-      return forwardJson(rc, json.encode());
-    } else {
-      return rc.response().setStatusCode(404).end();
-    }
-  }
-
-  private Uni<Void> forwardJson(RoutingContext rc, String json) {
-    return rc.response()
-      .putHeader("Content-Type", "application/json")
-      .end(json);
-  }
-
-  private Uni<String> mapProductsToJson(List<Product> products) {
-    try {
-      return Uni.createFrom().item(objectMapper.writeValueAsString(products));
-    } catch (JsonProcessingException mappingError) {
-      return Uni.createFrom().failure(mappingError);
-    }
+  private <T> void dispatch(String operation, RoutingContext rc, Function<Mutiny.Session, Uni<T>> block) {
+    emf.withSession(block).subscribe().with(
+      ok -> logger.info("Served {} request from {}", operation, rc.request().remoteAddress()),
+      err -> {
+        logger.error("Failed to serve {} request from {}", operation, rc.request().remoteAddress(), err);
+        rc.fail(500);
+      }
+    );
   }
 }
+
