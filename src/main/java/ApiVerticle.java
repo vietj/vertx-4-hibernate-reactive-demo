@@ -2,6 +2,7 @@ import data.Product;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;
+import io.vertx.mutiny.core.http.HttpServer;
 import io.vertx.mutiny.ext.web.Router;
 import io.vertx.mutiny.ext.web.RoutingContext;
 import io.vertx.mutiny.ext.web.handler.BodyHandler;
@@ -28,12 +29,20 @@ public class ApiVerticle extends AbstractVerticle {
 
   @Override
   public Uni<Void> asyncStart() {
-    var pgPort = config().getInteger("pgPort", 5432);
-    var props = Map.of("javax.persistence.jdbc.url", "jdbc:postgresql://localhost:" + pgPort + "/postgres");
 
-    emf = Persistence
-      .createEntityManagerFactory("pg-demo", props)
-      .unwrap(Mutiny.SessionFactory.class);
+    Uni<Void> startHibernate = Uni.createFrom().deferred(() -> {
+      var pgPort = config().getInteger("pgPort", 5432);
+      var props = Map.of("javax.persistence.jdbc.url", "jdbc:postgresql://localhost:" + pgPort + "/postgres");
+
+      emf = Persistence
+        .createEntityManagerFactory("pg-demo", props)
+        .unwrap(Mutiny.SessionFactory.class);
+
+      logger.info("Hibernate Reactive has started");
+      return Uni.createFrom().voidItem();
+    });
+
+    startHibernate = vertx.executeBlocking(startHibernate);
 
     Router router = Router.router(vertx);
 
@@ -44,11 +53,12 @@ public class ApiVerticle extends AbstractVerticle {
     router.get("/products/:id").respond(this::fetchProduct);
     router.post("/products").handler(this::appendProduct);
 
-    return vertx.createHttpServer()
+    Uni<HttpServer> startHttpServer = vertx.createHttpServer()
       .requestHandler(router::handle)
       .listen(8080)
-      .onItem().invoke(() -> logger.info("HTTP server listening on port 8080"))
-      .replaceWithVoid();
+      .onItem().invoke(() -> logger.info("HTTP server listening on port 8080"));
+
+    return Uni.combine().all().unis(startHibernate, startHttpServer).discardItems();
   }
 
   private Uni<List<Product>> listProducts() {
