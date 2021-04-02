@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import javax.persistence.Persistence;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -20,13 +21,20 @@ public class ApiVerticle extends AbstractVerticle {
 
   private static final Logger logger = LoggerFactory.getLogger(ApiVerticle.class);
 
-  private Mutiny.SessionFactory emf = Persistence.createEntityManagerFactory("pg-demo").unwrap(Mutiny.SessionFactory.class);
+  private Mutiny.SessionFactory emf;
 
   public ApiVerticle() {
   }
 
   @Override
   public Uni<Void> asyncStart() {
+    var pgPort = config().getInteger("pgPort", 5432);
+    var props = Map.of("javax.persistence.jdbc.url", "jdbc:postgresql://localhost:" + pgPort + "/postgres");
+
+    emf = Persistence
+      .createEntityManagerFactory("pg-demo", props)
+      .unwrap(Mutiny.SessionFactory.class);
+
     Router router = Router.router(vertx);
 
     BodyHandler bodyHandler = BodyHandler.create();
@@ -44,19 +52,15 @@ public class ApiVerticle extends AbstractVerticle {
   }
 
   private Uni<List<Product>> listProducts() {
-    return emf.withSession(session -> session.createQuery("from Product", Product.class)
-      .getResultList());
+    return emf.withSession(session -> session.createQuery("from Product", Product.class).getResultList());
   }
 
   private Uni<Product> fetchProduct(RoutingContext rc) {
-    return Uni
-      .createFrom()
-      .item(() -> {
-        String idParam = rc.pathParam("id");
-        return Long.parseLong(idParam);
-      })
-      .flatMap(id -> emf
-        .withSession(session -> session.find(Product.class, id)));
+    return Uni.createFrom().item(() -> {
+      String idParam = rc.pathParam("id");
+      return Long.parseLong(idParam);
+    })
+      .chain(id -> emf.withSession(session -> session.find(Product.class, id)));
   }
 
   // TODO : cannot handle 201 code currently

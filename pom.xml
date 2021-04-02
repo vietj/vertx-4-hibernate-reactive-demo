@@ -4,42 +4,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <repositories>
-    <repository>
-      <id>s01-snapshots-repository</id>
-      <name>S01 Snapshots Repository</name>
-      <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>snapshots-repository</id>
-      <name>Snapshots Repository</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>hibernate-repository</id>
-      <name>Hibernate Repository</name>
-      <url>https://dl.bintray.com/davided/artifacts/</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
   <groupId>org.example</groupId>
   <artifactId>vertx-hr-demo</artifactId>
   <version>1.0-SNAPSHOT</version>
@@ -48,9 +12,9 @@
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
     <vertx.version>4.0.3</vertx.version>
-    <mutiny-vertx.version>2.3.0-SNAPSHOT</mutiny-vertx.version>
+    <mutiny-vertx.version>2.3.0</mutiny-vertx.version>
     <hibernate-reactive-core.version>1.0.0.Beta4.Vertx4</hibernate-reactive-core.version>
-    <mutiny.version>999-SNAPSHOT</mutiny.version>
+    <mutiny.version>0.15.0</mutiny.version>
     <logback-classic.version>1.2.3</logback-classic.version>
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
   </properties>
@@ -99,7 +63,7 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
-      <version>1.12.4</version>
+      <version>1.15.2</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -132,5 +96,41 @@
       </plugin>
     </plugins>
   </build>
+
+  <repositories>
+    <repository>
+      <id>s01-snapshots-repository</id>
+      <name>S01 Snapshots Repository</name>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>snapshots-repository</id>
+      <name>Snapshots Repository</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>hibernate-repository</id>
+      <name>Hibernate Repository</name>
+      <url>https://dl.bintray.com/davided/artifacts/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 
 </project>
