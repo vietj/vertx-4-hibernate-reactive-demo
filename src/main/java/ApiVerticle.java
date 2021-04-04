@@ -14,7 +14,6 @@ import javax.persistence.Persistence;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -51,7 +50,7 @@ public class ApiVerticle extends AbstractVerticle {
 
     router.get("/products").respond(rc -> listProducts());
     router.get("/products/:id").respond(this::fetchProduct);
-    router.post("/products").handler(this::appendProduct);
+    router.post("/products").respond(this::appendProduct);
 
     Uni<HttpServer> startHttpServer = vertx.createHttpServer()
       .requestHandler(router::handle)
@@ -73,9 +72,7 @@ public class ApiVerticle extends AbstractVerticle {
       .chain(id -> emf.withSession(session -> session.find(Product.class, id)));
   }
 
-  // TODO : cannot handle 201 code currently
-  // this is a 4.1 feature
-  private void appendProduct(RoutingContext rc) {
+  private Uni<Product> appendProduct(RoutingContext rc) {
     JsonObject json = rc.getBodyAsJson();
     String name;
     BigDecimal price;
@@ -86,29 +83,17 @@ public class ApiVerticle extends AbstractVerticle {
       price = new BigDecimal(json.getString("price"));
     } catch (Throwable err) {
       logger.error("Could not extract values", err);
-      rc.fail(400);
-      return;
+      return Uni.createFrom().failure(err);
     }
 
-    dispatch("appendProduct", rc, session -> {
-      Product product = new Product();
-      product.setName(name);
-      product.setPrice(price);
-      return session
-        .persist(product)
-        .chain(session::flush)
-        .chain(done -> rc.response().setStatusCode(201).end());
-    });
-  }
+    Product product = new Product();
+    product.setName(name);
+    product.setPrice(price);
 
-  private <T> void dispatch(String operation, RoutingContext rc, Function<Mutiny.Session, Uni<T>> block) {
-    emf.withSession(block).subscribe().with(
-      ok -> logger.info("Served {} request from {}", operation, rc.request().remoteAddress()),
-      err -> {
-        logger.error("Failed to serve {} request from {}", operation, rc.request().remoteAddress(), err);
-        rc.fail(500);
-      }
-    );
+    return emf.withSession(session -> session
+      .persist(product)
+      .chain(session::flush)
+      .replaceWith(product));
   }
 }
 

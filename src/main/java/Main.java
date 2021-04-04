@@ -17,15 +17,16 @@ public class Main {
       .withDatabaseName("postgres")
       .withUsername("postgres")
       .withPassword("vertx-in-action");
+
     postgreSQLContainer.start();
 
     logger.info("🚀 Starting Vert.x");
 
     Vertx vertx = Vertx.vertx();
 
-    DeploymentOptions options = new DeploymentOptions();
-    options.setConfig(new JsonObject()
-      .put("pgPort", postgreSQLContainer.getMappedPort(5432)));
+    DeploymentOptions options = new DeploymentOptions()
+      .setConfig(new JsonObject()
+        .put("pgPort", postgreSQLContainer.getMappedPort(5432)));
 
     vertx.deployVerticle(new ApiVerticle(), options).subscribe().with(
       ok -> logger.info("✅ ApiVerticle was deployed successfully"),
