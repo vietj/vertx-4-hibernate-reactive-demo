@@ -61,10 +61,14 @@ public class ApiVerticle extends AbstractVerticle {
   }
 
   private Uni<List<Product>> listProducts() {
+    logger.info("listProducts");
+
     return emf.withSession(session -> session.createQuery("from Product", Product.class).getResultList());
   }
 
   private Uni<Product> fetchProduct(RoutingContext rc) {
+    logger.info("fetchProduct");
+
     return Uni.createFrom().item(() -> {
       String idParam = rc.pathParam("id");
       return Long.parseLong(idParam);
@@ -73,6 +77,8 @@ public class ApiVerticle extends AbstractVerticle {
   }
 
   private Uni<Product> appendProduct(RoutingContext rc) {
+    logger.info("appendProduct");
+
     JsonObject json = rc.getBodyAsJson();
     String name;
     BigDecimal price;
