@@ -48,9 +48,9 @@ public class ApiVerticle extends AbstractVerticle {
     BodyHandler bodyHandler = BodyHandler.create();
     router.post().handler(bodyHandler::handle);
 
-    router.get("/products").respond(rc -> listProducts());
-    router.get("/products/:id").respond(this::fetchProduct);
-    router.post("/products").respond(this::appendProduct);
+    router.get("/products").respond(this::listProducts);
+    router.get("/products/:id").respond(this::getProduct);
+    router.post("/products").respond(this::createProduct);
 
     Uni<HttpServer> startHttpServer = vertx.createHttpServer()
       .requestHandler(router::handle)
@@ -60,24 +60,14 @@ public class ApiVerticle extends AbstractVerticle {
     return Uni.combine().all().unis(startHibernate, startHttpServer).discardItems();
   }
 
-  private Uni<List<Product>> listProducts() {
+  private Uni<List<Product>> listProducts(RoutingContext rc) {
     logger.info("listProducts");
 
     return emf.withSession(session -> session.createQuery("from Product", Product.class).getResultList());
   }
 
-  private Uni<Product> fetchProduct(RoutingContext rc) {
-    logger.info("fetchProduct");
-
-    return Uni.createFrom().item(() -> {
-      String idParam = rc.pathParam("id");
-      return Long.parseLong(idParam);
-    })
-      .chain(id -> emf.withSession(session -> session.find(Product.class, id)));
-  }
-
-  private Uni<Product> appendProduct(RoutingContext rc) {
-    logger.info("appendProduct");
+  private Uni<Product> createProduct(RoutingContext rc) {
+    logger.info("createProduct");
 
     JsonObject json = rc.getBodyAsJson();
     String name;
@@ -100,6 +90,16 @@ public class ApiVerticle extends AbstractVerticle {
       .persist(product)
       .chain(session::flush)
       .replaceWith(product));
+  }
+
+  private Uni<Product> getProduct(RoutingContext rc) {
+    logger.info("getProduct");
+
+    return Uni.createFrom().item(() -> {
+      String idParam = rc.pathParam("id");
+      return Long.parseLong(idParam);
+    })
+      .chain(id -> emf.withSession(session -> session.find(Product.class, id)));
   }
 }
 
